@@ -1,0 +1,267 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #000000;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.user-tabs {
+  display: flex;
+  background-color: #020617;
+  padding: 8px 16px 0;
+  gap: 4px;
+  overflow-x: auto;
+  align-items: flex-end;
+}
+
+.user-tab {
+  padding: 8px 16px;
+  background-color: #1e293b;
+  color: #94a3b8;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 13px;
+  border: 1px solid #334155;
+  border-bottom: none;
+  white-space: nowrap;
+}
+
+.user-tab:hover {
+  background-color: #334155;
+}
+
+.user-tab.active {
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-weight: 600;
+  border-color: #475569;
+}
+
+.add-user-container {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  margin-bottom: 4px;
+  gap: 4px;
+}
+
+.add-user-input {
+  width: 50px;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  padding: 4px;
+  border-radius: 4px;
+  outline: none;
+  font-size: 12px;
+  text-align: center;
+}
+
+.add-user-btn {
+  padding: 5px 12px;
+  background-color: transparent;
+  color: #38bdf8;
+  border: 1px solid #0369a1;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.add-user-btn:hover {
+  background-color: #0c4a6e;
+}
+
+.toolbar {
+  display: flex;
+  background-color: #0f172a;
+  padding: 8px 16px;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #1e293b;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.toolbar select, .toolbar input, .toolbar button {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  padding: 4px 8px;
+  border-radius: 4px;
+  outline: none;
+  font-size: 13px;
+}
+
+.toolbar button {
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  background-color: #334155;
+}
+
+.toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  background-color: #050505;
+  min-height: 500px;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.caliper-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.side-panel {
+  width: 320px;
+  background-color: #0f172a;
+  border-left: 1px solid #1e293b;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.panel-section {
+  background-color: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.panel-section h3 {
+  font-size: 14px;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 4px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.form-group label {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.form-group input, .form-group select {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #475569;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 100%;
+}
+
+.action-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.action-btn:hover { background-color: #1d4ed8; }
+
+.action-btn.outline {
+  background-color: transparent;
+  border: 1px solid #2563eb;
+  color: #60a5fa;
+}
+
+.action-btn.outline:hover {
+  background-color: #1e3a8a;
+}
+
+.event-btn {
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.event-btn:hover { background-color: #334155; }
+
+.impedance-head {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border: 2px solid #475569;
+  border-radius: 50%;
+}
+
+.electrode {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid #000;
+}
+
+.electrode.good { background-color: #22c55e; }
+.electrode.fair { background-color: #eab308; }
+.electrode.poor { background-color: #ef4444; }
+
+.status-bar {
+  background-color: #020617;
+  padding: 4px 16px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+}

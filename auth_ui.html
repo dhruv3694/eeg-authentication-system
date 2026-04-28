@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>EEG Brainprint Authentication</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#060a14;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden}
+:root{--cyan:#00d4ff;--green:#00ff88;--red:#ff3355;--gold:#ffd700;--purple:#9c6bff;--bg2:#0d1625;--bg3:#111c30;--border:#1e3a5f}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+header h1{font-size:1.25rem;font-weight:700;letter-spacing:2px;color:var(--cyan);text-transform:uppercase}
+header h1 span{color:#fff}
+#sim-status{display:flex;align-items:center;gap:8px;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+.dot.online{background:var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.grid{display:grid;grid-template-columns:280px 1fr 300px;gap:16px;padding:16px;height:calc(100vh - 58px)}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.panel-head{padding:12px 16px;background:rgba(0,212,255,.06);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)}
+.panel-body{padding:14px;flex:1;overflow-y:auto}
+/* Users list */
+.user-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer;transition:.2s}
+.user-card:hover{border-color:var(--cyan);background:rgba(0,212,255,.06)}
+.user-card.selected{border-color:var(--purple);background:rgba(156,107,255,.08)}
+.user-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.user-meta{font-size:11px;color:#64748b;margin-bottom:6px}
+.fingerprint{font-family:monospace;font-size:10px;background:#000;padding:4px 8px;border-radius:4px;color:var(--cyan);letter-spacing:1px}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px}
+.badge-ok{background:rgba(0,255,136,.15);color:var(--green);border:1px solid rgba(0,255,136,.3)}
+.badge-no{background:rgba(255,51,85,.12);color:var(--red);border:1px solid rgba(255,51,85,.3)}
+/* Auth terminal */
+.auth-center{display:flex;flex-direction:column;gap:14px}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;color:#64748b;text-transform:uppercase;margin-bottom:8px}
+.select-row{display:flex;gap:12px;align-items:flex-end}
+.field{flex:1;display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;color:#94a3b8;font-weight:600}
+select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:#e2e8f0;font-size:13px;cursor:pointer}
+select:focus{outline:none;border-color:var(--cyan)}
+.btn{padding:11px 22px;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;letter-spacing:.5px;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,#0070cc,#00a3ff);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,#0090ff,#00c3ff);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+.btn-ghost:hover{background:rgba(0,212,255,.08)}
+.btn-danger{background:rgba(255,51,85,.15);color:var(--red);border:1px solid rgba(255,51,85,.3)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+/* Result card */
+.result-card{background:var(--bg3);border:2px solid var(--border);border-radius:12px;padding:20px;text-align:center;transition:.4s}
+.result-card.granted{border-color:var(--green);background:rgba(0,255,136,.05)}
+.result-card.denied{border-color:var(--red);background:rgba(255,51,85,.05)}
+.result-verdict{font-size:2rem;font-weight:900;letter-spacing:4px;margin:8px 0}
+.result-card.granted .result-verdict{color:var(--green);text-shadow:0 0 20px rgba(0,255,136,.5)}
+.result-card.denied .result-verdict{color:var(--red);text-shadow:0 0 20px rgba(255,51,85,.5)}
+.score-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+.score-box{background:rgba(0,0,0,.3);border-radius:8px;padding:10px;border:1px solid var(--border)}
+.score-label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.score-val{font-size:1.4rem;font-weight:900;font-family:monospace}
+.score-box.main .score-val{font-size:1.8rem;color:var(--gold)}
+/* Gauge */
+.gauge-wrap{position:relative;margin:10px auto;width:180px;height:100px}
+.gauge-wrap svg{width:100%;height:100%}
+/* Feature table */
+.feat-table{width:100%;border-collapse:collapse;font-size:11px}
+.feat-table th{text-align:left;padding:5px 8px;background:rgba(0,212,255,.06);color:var(--cyan);font-size:10px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.feat-table td{padding:5px 8px;border-bottom:1px solid rgba(30,58,95,.5)}
+.feat-table tr:hover td{background:rgba(0,212,255,.04)}
+.diff-bar{height:4px;border-radius:2px;background:var(--border);margin-top:3px;overflow:hidden}
+.diff-fill{height:100%;border-radius:2px;transition:.4s}
+/* History */
+.hist-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px}
+.hist-item.granted{border-left:3px solid var(--green)}
+.hist-item.denied{border-left:3px solid var(--red)}
+.hist-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.hist-result{font-weight:800;font-size:11px}
+.hist-item.granted .hist-result{color:var(--green)}
+.hist-item.denied .hist-result{color:var(--red)}
+.hist-score{font-family:monospace;font-size:11px;color:var(--gold)}
+.hist-names{color:#94a3b8;font-size:11px}
+.hist-time{color:#475569;font-size:10px}
+.spinner{width:22px;height:22px;border:3px solid rgba(0,212,255,.2);border-top:3px solid var(--cyan);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fp-pair{display:flex;flex-direction:column;gap:4px;margin-top:12px;font-family:monospace;font-size:10px;text-align:left}
+.fp-row{display:flex;justify-content:space-between;padding:5px 10px;background:#000;border-radius:5px;border:1px solid var(--border)}
+.fp-row span:first-child{color:#64748b}
+.fp-row span:last-child{color:var(--cyan)}
+.fp-match{color:var(--green)!important}
+.no-data{color:#475569;font-size:12px;text-align:center;padding:20px}
+/* DL mode */
+.mode-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:14px}
+.mode-tab{flex:1;padding:8px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;background:transparent;color:#64748b;border:none;transition:.2s;text-transform:uppercase}
+.mode-tab.active{background:rgba(0,212,255,.12);color:var(--cyan)}
+.dl-badge{display:inline-block;background:linear-gradient(135deg,#6c00ff,#9c6bff);color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;letter-spacing:1px;margin-left:6px}
+.dl-info{background:rgba(156,107,255,.08);border:1px solid rgba(156,107,255,.3);border-radius:8px;padding:10px 14px;font-size:11px;color:#94a3b8;margin-bottom:10px}
+.dl-info strong{color:var(--purple)}
+</style>
+</head>
+<body>
+<header>
+  <h1>EEG <span>Brainprint</span> Authentication</h1>
+  <div id="sim-status">
+    <div class="dot" id="sim-dot"></div>
+    <span id="sim-text">Checking simulator...</span>
+    <span style="color:#475569;margin:0 8px">|</span>
+    <span id="dim-text" style="color:#64748b;font-size:11px"></span>
+    <span style="color:#475569;margin:0 8px">|</span>
+    <span id="attempts-text" style="color:#64748b;font-size:11px"></span>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- LEFT: Enrolled Users -->
+  <div class="panel">
+    <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;padding:15px 16px;min-height:50px">
+      <span style="flex:1">Enrolled Brainprints</span>
+      <button class="btn btn-primary" id="add-user-btn" style="padding:6px 14px;font-size:12px;background:var(--cyan);color:#000;box-shadow:0 0 15px rgba(0,212,255,0.3)" onclick="addUser()">+ Add User</button>
+    </div>
+    <div class="panel-body" id="enrolled-list">
+      <div class="no-data">Loading...</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Auth Terminal -->
+  <div class="panel">
+    <div class="panel-head">Authentication Terminal</div>
+    <div class="panel-body">
+      <div class="auth-center">
+          <!-- Mode tabs -->
+          <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-metric" onclick="setMode('metric')">Metric Auth</button>
+            <button class="mode-tab" id="tab-dl" onclick="setMode('dl')">DL Auth <span class="dl-badge">CNN+LSTM</span></button>
+          </div>
+          <div class="select-row">
+            <div class="field">
+              <label>Probe (Live EEG Source)</label>
+              <select id="probe-sel"></select>
+            </div>
+            <div class="field">
+              <label>Target (Stored Brainprint)</label>
+              <select id="target-sel"></select>
+            </div>
+          </div>
+          <!-- Metric buttons -->
+          <div id="btn-metric" style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn btn-primary" id="run-btn" onclick="runAuth()">&#9654; Run Authentication</button>
+            <button class="btn btn-ghost" id="self-btn" onclick="runSelf()">Self-Test</button>
+          </div>
+          <!-- DL buttons -->
+          <div id="btn-dl" style="display:none;flex-direction:column;gap:10px;margin-top:12px">
+            <div class="dl-info" id="dl-info">Click "DL Auth" tab to load model status.</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" id="dl-train-btn" onclick="dlTrain()" style="background:linear-gradient(135deg,#6c00ff,#9c6bff);color:#fff;flex:1">&#9998; Train CNN+LSTM</button>
+              <button class="btn btn-primary" id="dl-run-btn" onclick="dlRunAuth()">&#9654; DL Verify</button>
+              <button class="btn btn-ghost" id="dl-self-btn" onclick="dlRunSelf()">DL Self</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Result -->
+        <div class="result-card" id="result-card" style="display:none">
+          <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase">Verdict</div>
+          <div class="result-verdict" id="result-verdict"></div>
+          <div style="font-size:12px;color:#94a3b8" id="result-names"></div>
+
+          <!-- Gauge -->
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 200 110">
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#ff3355"/>
+                  <stop offset="50%" stop-color="#ffd700"/>
+                  <stop offset="100%" stop-color="#00ff88"/>
+                </linearGradient>
+              </defs>
+              <path d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="#1e3a5f" stroke-width="12" stroke-linecap="round"/>
+              <path id="gauge-arc" d="M10,100 A90,90 0 0,1 190,100" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 283"/>
+              <text x="100" y="92" text-anchor="middle" fill="#fff" font-size="22" font-weight="900" font-family="monospace" id="gauge-pct">0%</text>
+              <text x="100" y="108" text-anchor="middle" fill="#64748b" font-size="9" letter-spacing="2">SIMILARITY</text>
+            </svg>
+          </div>
+
+          <div class="score-row">
+            <div class="score-box main">
+              <div class="score-label">Ensemble</div>
+              <div class="score-val" id="s-ens">&mdash;</div>
+            </div>
+            <div class="score-box">
+              <div class="score-label" id="lbl-cos">Cosine</div>
+              <div class="score-val" id="s-cos" style="color:var(--cyan)">&mdash;</div>
+            </div>
+            <div class="score-box">
+              <div class="score-label" id="lbl-euc">3rd Score</div>
+              <div class="score-val" id="s-euc" style="color:var(--purple)">&mdash;</div>
+            </div>
+          </div>
+
+          <div class="fp-pair">
+            <div class="fp-row"><span>Stored Fingerprint</span><span id="fp-stored"></span></div>
+            <div class="fp-row"><span>Live Fingerprint</span><span id="fp-live"></span></div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" style="display:none;text-align:center;padding:30px">
+          <div class="spinner"></div>
+          <div style="margin-top:12px;color:#64748b;font-size:13px">Extracting live features &amp; computing similarity...</div>
+        </div>
+
+        <!-- Feature breakdown -->
+        <div id="breakdown-section" style="display:none">
+          <div class="section-label" style="margin-bottom:8px">Feature Breakdown (<span id="feat-count">27</span> Biometric Dimensions)</div>
+          <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+            <table class="feat-table">
+              <thead><tr><th>Feature</th><th>Stored</th><th>Live</th><th>Δ%</th></tr></thead>
+              <tbody id="feat-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: History -->
+  <div class="panel">
+    <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Auth History</span>
+      <button class="btn btn-danger" style="padding:4px 10px;font-size:10px" onclick="clearHistory()">Clear</button>
+    </div>
+    <div class="panel-body" id="history-list">
+      <div class="no-data">No attempts yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8001';
+let users = [];
+let currentMode = 'metric';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-metric').classList.toggle('active', mode==='metric');
+  document.getElementById('tab-dl').classList.toggle('active', mode==='dl');
+  document.getElementById('btn-metric').style.display = mode==='metric' ? 'flex' : 'none';
+  document.getElementById('btn-dl').style.display = mode==='dl' ? 'flex' : 'none';
+  if (mode==='dl') loadDLStatus();
+}
+
+async function loadDLStatus() {
+  try {
+    const r = await fetch(`${API}/api/auth/dl_status`);
+    const d = await r.json();
+    const el = document.getElementById('dl-info');
+    if (!d.available) { el.innerHTML = 'DL engine unavailable'; return; }
+    if (d.trained) {
+      el.innerHTML = `<strong>Model Trained</strong> &mdash; ${d.n_users_enrolled} users &middot; ${d.total_windows||'?'} windows &middot; Acc: <strong style="color:var(--green)">${((d.train_accuracy||0)*100).toFixed(1)}%</strong> &middot; Arch: <strong style="color:var(--purple)">${d.architecture}</strong>`;
+    } else {
+      el.innerHTML = '<strong style="color:var(--gold)">Model not trained.</strong> Click "Train CNN+LSTM" first.';
+    }
+  } catch(e) { document.getElementById('dl-info').textContent = 'Cannot reach auth server.'; }
+}
+
+async function dlTrain() {
+  const btn = document.getElementById('dl-train-btn');
+  btn.disabled = true; btn.textContent = 'Training...';
+  document.getElementById('dl-info').innerHTML = '<div class="spinner" style="display:inline-block"></div> Training 1D CNN + LSTM + MLP...';
+  try {
+    const r = await fetch(`${API}/api/auth/dl_train`, {method:'POST'});
+    const d = await r.json();
+    if (d.status === 'ok') {
+      document.getElementById('dl-info').innerHTML =
+        `<strong style="color:var(--green)">Training complete!</strong> ${d.n_iterations} epochs &middot; Accuracy: <strong>${(d.train_accuracy*100).toFixed(1)}%</strong> &middot; ${d.elapsed_sec}s`;
+    } else {
+      document.getElementById('dl-info').textContent = d.message || JSON.stringify(d);
+    }
+  } catch(e) { alert('Training failed: ' + e.message); }
+  finally { btn.disabled = false; btn.innerHTML = '&#9998; Retrain CNN+LSTM'; }
+}
+
+async function dlRunAuth() {
+  const probe = parseInt(document.getElementById('probe-sel').value);
+  const target = parseInt(document.getElementById('target-sel').value);
+  await doDLAuth(probe, target);
+}
+
+async function dlRunSelf() {
+  const probe = parseInt(document.getElementById('probe-sel').value);
+  await doDLAuth(probe, probe);
+}
+
+async function doDLAuth(probe, target) {
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('breakdown-section').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  ['dl-run-btn','dl-self-btn','dl-train-btn'].forEach(id => document.getElementById(id).disabled = true);
+  try {
+    const r = await fetch(`${API}/api/auth/dl_verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({probe_uid: probe, target_uid: target})
+    });
+    if (!r.ok) { const e = await r.json(); alert(`DL Error: ${e.detail}`); return; }
+    const d = await r.json();
+    renderResult(d, 'dl');
+    await loadHistory();
+  } catch(e) { alert('DL request failed: ' + e.message); }
+  finally {
+    document.getElementById('loading').style.display = 'none';
+    ['dl-run-btn','dl-self-btn','dl-train-btn'].forEach(id => document.getElementById(id).disabled = false);
+  }
+}
+
+async function init() {
+  await loadStatus();
+  await loadEnrolled();
+  await loadHistory();
+  setInterval(loadHistory, 5000);
+  setInterval(loadStatus, 8000);
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch(`${API}/api/auth/status`);
+    const d = await r.json();
+    document.getElementById('sim-dot').className = 'dot' + (d.simulator_online ? ' online' : '');
+    document.getElementById('sim-text').textContent = d.simulator_online
+      ? `Simulator LIVE (${d.simulator_users.length} users)` : 'Simulator OFFLINE';
+    document.getElementById('dim-text').textContent = `${d.biometric_dimensions} dimensions`;
+    document.getElementById('attempts-text').textContent = `${d.total_auth_attempts} attempts`;
+  } catch(e) {
+    document.getElementById('sim-text').textContent = 'Auth Server Offline';
+  }
+}
+
+async function addUser() {
+  try {
+    const r = await fetch(`${API}/api/auth/add_user`, {method:'POST'});
+    if (r.ok) {
+      await loadEnrolled();
+    } else {
+      const e = await r.json();
+      alert('Failed to add user: ' + (e.detail || JSON.stringify(e)));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function loadEnrolled() {
+  try {
+    const r = await fetch(`${API}/api/auth/enrolled`);
+    const d = await r.json();
+    users = d.users;
+    renderEnrolled();
+    renderSelects();
+  } catch(e) {
+    document.getElementById('enrolled-list').innerHTML = '<div class="no-data">Cannot reach auth server.</div>';
+  }
+}
+
+function renderEnrolled() {
+  const el = document.getElementById('enrolled-list');
+  if (!users.length) { el.innerHTML = '<div class="no-data">No users in simulator DB.</div>'; return; }
+  el.innerHTML = users.map(u => `
+    <div class="user-card" onclick="selectUser(${u.uid})">
+      <div class="user-name">${u.name}
+        <span class="badge ${u.has_brainprint ? 'badge-ok' : 'badge-no'}">${u.has_brainprint ? '\u2713 ENROLLED' : '\u2717 NO DATA'}</span>
+      </div>
+      <div class="user-meta">UID ${u.uid} &middot; Age ${u.age} &middot; ${u.pathology || 'No pathology'}</div>
+      <div class="fingerprint">${u.fingerprint || 'NO VECTOR'}</div>
+      <button onclick="event.stopPropagation();enrollUser(${u.uid})" style="margin-top:8px;width:100%;padding:5px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:#00d4ff;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700">&#8635; Re-Enroll Now</button>
+    </div>
+  `).join('');
+}
+
+function renderSelects() {
+  const opts = users.map(u => `<option value="${u.uid}">${u.name} (UID ${u.uid})</option>`).join('');
+  document.getElementById('probe-sel').innerHTML = opts;
+  document.getElementById('target-sel').innerHTML = opts;
+}
+
+function selectUser(uid) {
+  document.getElementById('target-sel').value = uid;
+  document.querySelectorAll('.user-card').forEach((el, i) => {
+    el.classList.toggle('selected', users[i] && users[i].uid === uid);
+  });
+}
+
+async function runAuth() {
+  const probe = parseInt(document.getElementById('probe-sel').value);
+  const target = parseInt(document.getElementById('target-sel').value);
+  await doAuth(probe, target);
+}
+
+async function runSelf() {
+  const probe = parseInt(document.getElementById('probe-sel').value);
+  await doAuth(probe, probe);
+}
+
+async function doAuth(probe, target) {
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('breakdown-section').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('self-btn').disabled = true;
+
+  try {
+    const r = await fetch(`${API}/api/auth/verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({probe_uid: probe, target_uid: target})
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      alert(`Error: ${err.detail || 'Unknown error'}`);
+      return;
+    }
+    const d = await r.json();
+    renderResult(d, 'metric');
+    renderBreakdown(d.feature_breakdown);
+    await loadHistory();
+    await loadStatus();
+  } catch(e) {
+    alert('Request failed: ' + e.message);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('self-btn').disabled = false;
+  }
+}
+
+function renderResult(d, mode) {
+  const card = document.getElementById('result-card');
+  card.style.display = 'block';
+  card.className = 'result-card ' + (d.match ? 'granted' : 'denied');
+  const modeTag = mode === 'dl' ? ' [CNN+LSTM]' : '';
+  document.getElementById('result-verdict').textContent = (d.match ? '\u2713 ACCESS GRANTED' : '\u2717 ACCESS DENIED') + modeTag;
+  const pn = d.probe_name || `User ${d.probe_uid}`;
+  const tn = d.target_name || `User ${d.target_uid}`;
+  document.getElementById('result-names').textContent = `Probe: ${pn} -> Target: ${tn}`;
+
+  const pct = Math.round(d.ensemble_score * 100);
+  document.getElementById('gauge-pct').textContent = pct + '%';
+  const arcLen = 283 * d.ensemble_score;
+  document.getElementById('gauge-arc').setAttribute('stroke-dasharray', `${arcLen} 283`);
+  document.getElementById('gauge-arc').setAttribute('stroke', d.match ? '#00ff88' : '#ff3355');
+
+  document.getElementById('s-ens').textContent = d.ensemble_score.toFixed(4);
+  document.getElementById('s-cos').textContent = d.cosine_similarity.toFixed(4);
+
+  if (mode === 'dl') {
+    // DL mode: show MLP probability instead of Euclidean
+    document.getElementById('lbl-euc').textContent = 'MLP Prob';
+    document.getElementById('s-euc').textContent = (d.mlp_probability || 0).toFixed(4);
+    // No fingerprints in DL mode - show model info
+    document.getElementById('fp-stored').textContent = d.model || 'CNN+LSTM+MLP';
+    document.getElementById('fp-live').textContent = `${d.embed_dim || 64}-dim embedding`;
+  } else {
+    document.getElementById('lbl-euc').textContent = 'Euclidean';
+    document.getElementById('s-euc').textContent = (d.euclidean_similarity || 0).toFixed(4);
+    document.getElementById('fp-stored').textContent = d.fingerprint_stored || '';
+    document.getElementById('fp-live').textContent = d.fingerprint_live || '';
+    document.getElementById('fp-stored').className = d.fingerprint_stored === d.fingerprint_live ? 'fp-match' : '';
+    document.getElementById('fp-live').className = document.getElementById('fp-stored').className;
+  }
+}
+
+function renderBreakdown(breakdown) {
+  if (!breakdown) return;
+  document.getElementById('breakdown-section').style.display = 'block';
+  document.getElementById('feat-count').textContent = breakdown.length;
+  const tbody = document.getElementById('feat-tbody');
+  tbody.innerHTML = breakdown.map(f => {
+    const mq = f.match_quality;
+    const color = mq > 0.85 ? '#00ff88' : mq > 0.6 ? '#ffd700' : '#ff3355';
+    const fillPct = Math.min(f.diff_pct, 100);
+    return `<tr>
+      <td style="color:#94a3b8">${f.key}</td>
+      <td style="font-family:monospace;color:#64748b">${f.stored.toFixed(4)}</td>
+      <td style="font-family:monospace;color:var(--cyan)">${f.live.toFixed(4)}</td>
+      <td>
+        <span style="color:${color};font-weight:700">${f.diff_pct.toFixed(1)}%</span>
+        <div class="diff-bar"><div class="diff-fill" style="width:${fillPct}%;background:${color}"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch(`${API}/api/auth/history`);
+    const d = await r.json();
+    const el = document.getElementById('history-list');
+    if (!d.history.length) { el.innerHTML = '<div class="no-data">No attempts yet.</div>'; return; }
+    el.innerHTML = d.history.map(h => {
+      const cls = h.result === 'GRANTED' ? 'granted' : 'denied';
+      const t = new Date(h.ts * 1000).toLocaleTimeString();
+      return `<div class="hist-item ${cls}">
+        <div class="hist-top">
+          <span class="hist-result">${h.result === 'GRANTED' ? '✓' : '✗'} ${h.result}</span>
+          <span class="hist-score">${(h.ensemble_score * 100).toFixed(1)}%</span>
+        </div>
+        <div class="hist-names">${h.probe_name} → ${h.target_name}</div>
+        <div class="hist-time">${t}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function enrollUser(uid) {
+  try {
+    const r = await fetch(`${API}/api/auth/enroll/${uid}`, {method:'POST'});
+    const d = await r.json();
+    if (r.ok) {
+      alert(`Re-enrolled UID ${uid}\nNew fingerprint: ${d.fingerprint}`);
+      await loadEnrolled();
+    } else {
+      alert('Enroll failed: ' + (d.detail || JSON.stringify(d)));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function clearHistory() {
+  await fetch(`${API}/api/auth/history`, {method:'DELETE'});
+  await loadHistory();
+  await loadStatus();
+}
+
+init();
+</script>
+</body>
+</html>
