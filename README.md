@@ -56,5 +56,4 @@ If you are a collaborator:
 2. Create a branch for your feature: `git checkout -b feature-name`
 3. Push your changes: `git push origin feature-name`
 
----
-*Created by Antigravity AI for research and clinical simulation.*
+
